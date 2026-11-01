@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Rental System Portal</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 30px; background: #eef2f3; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
+        .header-section { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #3498db; padding-bottom: 12px; margin-top: 0; }
+        h2 { color: #2c3e50; margin: 0; }
+        .logout-btn { background: #e74c3c; color: white; padding: 8px 15px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 13px; }
+        .logout-btn:hover { background: #c0392b; }
+        .grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 30px; margin-top: 20px; }
+        .card { border: 1px solid #e0e0e0; padding: 15px; border-radius: 8px; margin-bottom: 12px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .status-btn { padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; color: white; display: inline-block; text-transform: uppercase; }
+        .AVAILABLE { background: #2ecc71; } .RENTED { background: #e74c3c; }
+        label { display: block; margin-top: 12px; font-weight: 600; color: #34495e; }
+        input, select, button { width: 100%; padding: 12px; margin-top: 6px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        .submit-btn { background: #3498db; color: white; border: none; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; transition: background 0.2s; }
+        .submit-btn:hover { background: #2980b9; }
+        .notice { font-size: 12px; color: #7f8c8d; margin-top: 5px; }
+        .badge { background: #e8f4fd; color: #3498db; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 5px;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-section">
+            <h2>🚗 Vehicle Rental Management Portal</h2>
+            <a href="/logout" class="logout-btn">Logout 🔒</a>
+        </div>
+        <div class="grid">
+            <div>
+                <h3>Available Fleet (Live Garage)</h3>
+                <div id="fleet-list">Loading vehicle logs...</div>
+            </div>
+            <div>
+                <h3>Create Reservation</h3>
+                <form id="booking-form">
+                    <label>Select Vehicle:</label>
+                    <select id="book-id" required>
+                        <!-- Options filled via loadVehicles UI -->
+                    </select>
+                    <label>Customer Name:</label>
+                    <input type="text" id="cust-name" placeholder="Enter full name" required>
+                    <label>Rental Duration (Days):</label>
+                    <input type="number" id="rent-days" min="1" value="1" required>
+                    <div class="notice">*Get 10% auto-discount if duration is more than 7 days!</div>
+                    <button type="submit" class="submit-btn">Confirm Booking</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function loadVehicles() {
+            fetch('/api/vehicles')
+                .then(res => {
+                    if(res.status === 401) { window.location.href = '/login'; return; }
+                    return res.json();
+                })
+                .then(data => {
+                    if(!data) return;
+                    const container = document.getElementById('fleet-list');
+                    const dropdown = document.getElementById('book-id');
+                    container.innerHTML = '';
+                    dropdown.innerHTML = '';
+                    
+                    data.forEach(v => {
+                        container.innerHTML += `
+                            <div class="card">
+                                <span style="font-size: 18px; font-weight: bold; color: #2c3e50;">${v.model}</span> 
+                                <span class="badge">${v.type}</span> (${v.id})<br>
+                                <span style="color: #7f8c8d;">Rate: Rs. ${v.rent}/day</span><br><br>
+                                <span class="status-btn ${v.status}">${v.status}</span>
+                            </div>
+                        `;
+                        dropdown.innerHTML += `<option value="${v.id}">${v.id} - ${v.model} (Rs. ${v.rent}/day)</option>`;
+                    });
+                });
+        }
+
+        document.getElementById('booking-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const payload = {
+                vehicle_id: document.getElementById('book-id').value,
+                customer_name: document.getElementById('cust-name').value,
+                days: document.getElementById('rent-days').value
+            };
+
+            fetch('/api/book', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(resData => {
+                alert(resData.message);
+                loadVehicles(); // Real-time UI refresh!
+            });
+        });
+
+        window.onload = loadVehicles;
+    </script>
+</body>
+</html>
